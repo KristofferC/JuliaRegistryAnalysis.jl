@@ -33,7 +33,7 @@ Visualized with Gephi:
 ```julia
 # Sorting
 packages = ["Distributions", "Compat", "Crayons", "DataFrames", "OhMyREPL", "Plots", "CUDA", "NearestNeighbors"]
-sort(packages; by=x-> Graphs.indegree(graph, name_to_vertex[x]))
+sort(packages; by=x->Graphs.indegree(graph, name_to_vertex[x]))
 ```
 
 Result:
@@ -48,3 +48,40 @@ Result:
  "DataFrames"
  "Distributions"
  ```
+
+### Find all packages directly depending on another package.
+
+```julia
+graph_rev = reverse(graph)
+requires_deps_verts = neighborhood(graph_rev, name_to_vertex["Requires"], 1)[2:end]
+requires_deps_verts_sorted = sort(requires_deps; by=x->Graphs.indegree(graph, x))
+requires_deps = [get_prop(graph, i, :label) => Graphs.indegree(graph, i) for i in requires_deps_verts_sorted]
+```
+
+Result:
+
+```julia
+440-element Vector{Pair{String, Int64}}:
+                   "DeconvOptim" => 0
+                      "ThArrays" => 0
+              "FinancialToolbox" => 0
+           "ServiceSolicitation" => 0
+                         "Finch" => 0
+                       "FMIFlux" => 0
+ "MotionCaptureJointCalibration" => 0
+               "SignalOperators" => 0
+                  "PressureDrop" => 0
+                  "PlanetOrbits" => 0
+                  "FreezeCurves" => 0
+                                 ⋮
+                     "Symbolics" => 65
+                        "Revise" => 66
+             "CategoricalArrays" => 87
+                    "DiffEqBase" => 100
+                        "Zygote" => 107
+                          "HDF5" => 139
+                          "CUDA" => 159
+                "Interpolations" => 203
+                         "Plots" => 233
+                        "FileIO" => 251
+```
