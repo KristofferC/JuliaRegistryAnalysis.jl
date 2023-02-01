@@ -49,6 +49,27 @@ Result:
  "Distributions"
  ```
 
+#### Version that considers transitive dependencies
+
+```julia
+trans = transitiveclosure(graph.graph)
+sort(packages; by=x->Graphs.indegree(trans, name_to_vertex[x]))
+```
+
+Result:
+
+```julia
+8-element Vector{String}:
+ "OhMyREPL"
+ "Plots"
+ "CUDA"
+ "NearestNeighbors"
+ "DataFrames"
+ "Crayons"
+ "Distributions"
+ "Compat"
+```
+
 ### Find all packages directly depending on another package.
 
 ```julia
