@@ -1,8 +1,9 @@
 module JuliaRegistryAnalysis
 
 import MetaGraphs, Graphs
-import Pkg.Registry: compat_info, registry_info, reachable_registries, RegistryInstance, JULIA_UUID
-import Pkg.Types: stdlibs
+import Pkg
+using Pkg.Registry: compat_info, registry_info, reachable_registries, RegistryInstance, JULIA_UUID, weak_compat_info
+using Pkg.Types: stdlibs
 using UUIDs
 using TOML
 
@@ -32,7 +33,7 @@ The graph is a `MetaGraphs.MetaDiGraph` with the following properties on the ver
 
 The recommended way of saving the graph to a file is using `MetaGraphs.savedot(io, graph)`
 """
-function dependency_graph(; include::Function = (name, uuid) -> !(is_stdlib(uuid) || is_jll(name)))
+function dependency_graph(; include::Function = (name, uuid) -> !(is_stdlib(uuid) || is_jll(name)), include_weak_deps::Bool=false)
      # TODO, limit registries
     regs = reachable_registries()
     
@@ -82,20 +83,44 @@ function dependency_graph(; include::Function = (name, uuid) -> !(is_stdlib(uuid
             pkg = registry_info(entry)
             name = get_name(reg, uuid)
             include_package(name, uuid; include) || continue
-            cinfo = compat_info(pkg)
             props = Dict(:label => name, :name => name, :uuid => uuid) # add registry as a property?
             MetaGraphs.set_props!(g, d[uuid], props)
-             # Only consider last version
-            cinfo_max_v = cinfo[maximum(keys(cinfo))]
+
+            # Regular dependencies
+            cinfo = compat_info(pkg)
+            # Only consider last version
+            max_v = maximum(keys(cinfo))
+            cinfo_max_v = cinfo[max_v]
+            weak_cinfo = weak_compat_info(pkg)
+            weak_cinfo_max_v = nothing
+            if weak_cinfo !== nothing
+                weak_cinfo_max_v = get(weak_cinfo, max_v, nothing)
+            end
             for (dep_uuid, _) in cinfo_max_v
                 dep_name = get_name(reg, dep_uuid)
+                if weak_cinfo_max_v !== nothing && dep_uuid in keys(weak_cinfo_max_v)
+                    continue
+                end
                 include_package(dep_name, dep_uuid; include) || continue
                 Graphs.add_edge!(g, d[uuid], d[dep_uuid])
+                MetaGraphs.set_prop!(g, Graphs.Edge(d[uuid], d[dep_uuid]), :weak, false)
+            end
+
+            # Weak dependencies
+            if include_weak_deps
+                weak_cinfo === nothing && continue
+                # Only consider last version
+                weak_cinfo_max_v === nothing && continue
+                for (dep_uuid, _) in weak_cinfo_max_v
+                    dep_name = get_name(reg, dep_uuid)
+                    include_package(dep_name, dep_uuid; include) || continue
+                    Graphs.add_edge!(g, d[uuid], d[dep_uuid])
+                    MetaGraphs.set_prop!(g, Graphs.Edge(d[uuid], d[dep_uuid]), :weak, true)
+                end
             end
         end
     end
     Graphs.is_cyclic(g) && @warn("Dependency graph contains cycles")
-
     return g
 end
 

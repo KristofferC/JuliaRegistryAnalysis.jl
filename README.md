@@ -8,7 +8,8 @@ Run this before examples:
 using JuliaRegistryAnalysis
 using Graphs, MetaGraphs
 # Hint: Look at docstring for JuliaRegistryAnalysis.dependency_graph
-graph = JuliaRegistryAnalysis.dependency_graph()
+include_weak_deps = true
+graph = JuliaRegistryAnalysis.dependency_graph(; include_weak_deps)
 name_to_vertex = Dict{String, Int}(get_prop(graph, i, :label) => i for i in 1:nv(graph))
 ```
 
