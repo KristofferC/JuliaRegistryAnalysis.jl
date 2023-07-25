@@ -76,7 +76,7 @@ Result:
 ```julia
 graph_rev = reverse(graph)
 requires_deps_verts = neighborhood(graph_rev, name_to_vertex["Requires"], 1)[2:end]
-requires_deps_verts_sorted = sort(requires_deps; by=x->Graphs.indegree(graph, x))
+requires_deps_verts_sorted = sort(requires_deps_verts; by=x->Graphs.indegree(graph, x))
 requires_deps = [get_prop(graph, i, :label) => Graphs.indegree(graph, i) for i in requires_deps_verts_sorted]
 ```
 
